@@ -30,9 +30,7 @@ export const selectCurrentSelection = createSelector(
 export const selectareHandsEmpty = createSelector(
   selectPlayerHand,
   selectComprHand,
-  (playerCards, compCards) => {
-    return !playerCards.length && !compCards.length;
-  }
+  (playerCards, compCards) => !playerCards.length && !compCards.length
 );
 
 export const selectNoCardsLeft = createSelector(

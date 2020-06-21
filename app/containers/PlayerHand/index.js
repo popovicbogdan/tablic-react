@@ -4,7 +4,7 @@
  *
  */
 
-import React, { memo, useEffect } from 'react';
+import React, { memo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Container } from './PlayerHand.styled';
 import {
@@ -29,10 +29,6 @@ export function PlayerHand() {
     }
     dispatch(compPlay());
   };
-
-  const abc = useSelector(state => state.cardsReducer.abc);
-  // const abcd = useSelector(state => state.cardsReducer.combinations);
-  console.log('ASDASDASDASD', abc);
 
   return (
     <Container>

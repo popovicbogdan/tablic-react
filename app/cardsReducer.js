@@ -343,6 +343,7 @@ function getCardsThatCanBeCollected(card, combinations) {
 function getValue(val, sum) {
   switch (val) {
     case 'A':
+      // eslint-disable-next-line no-nested-ternary
       return sum === 11 ? 11 : sum > 1 && sum + 11 < 14 ? 11 : 1;
     case 'J':
       return 12;
