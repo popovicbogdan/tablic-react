@@ -6,6 +6,7 @@ export const ADD_CARD_TO_TABLE = 'ADD_CARD_TO_TABLE';
 export const DEAL_CARDS = 'DEAL_CARDS';
 export const COMP_PLAY = 'COMP_PLAY';
 export const GET_REST_OF_CARDS = 'GET_REST_OF_CARDS';
+export const FINISH_GAME = 'FINISH_GAME';
 
 export const startGame = () => ({
   type: START_GAME
@@ -36,4 +37,8 @@ export const compPlay = () => ({
 
 export const giveRestOfTableCardsToLastToCollect = () => ({
   type: GET_REST_OF_CARDS
+});
+
+export const finishGame = () => ({
+  type: FINISH_GAME
 });

@@ -11,7 +11,8 @@ import {
   ADD_CARD_TO_TABLE,
   DEAL_CARDS,
   COMP_PLAY,
-  GET_REST_OF_CARDS
+  GET_REST_OF_CARDS,
+  FINISH_GAME
 } from './actions';
 
 export const SIGNS = { HEARTS: 'H', SPADES: 'S', DIAMONDS: 'D', CLUBS: 'C' };
@@ -78,7 +79,7 @@ function cardsReducer(state = initState, action) {
   return produce(state, draft => {
     switch (action.type) {
       case START_GAME:
-        startGame(draft);
+        handleStartGame(draft);
         break;
       case ADD_OR_REMOVE_FROM_CURRENT_SELECTION:
         handleAddOrRemoveFromCurrentSelection(draft, action);
@@ -98,11 +99,14 @@ function cardsReducer(state = initState, action) {
       case GET_REST_OF_CARDS:
         handleCollectRestOfCards(draft);
         break;
+      case FINISH_GAME:
+        handleFinishGame(draft);
+        break;
     }
   });
 }
 
-function startGame(state) {
+function handleStartGame(state) {
   state.cards.forEach(() => {
     const randomIndex = Math.floor(Math.random() * 52) + 1;
 
@@ -134,14 +138,19 @@ function handleCollectCards(state, { card }) {
   );
 
   if (
-    currentSumOfSelectedCards ===
-    getValue(card.value, currentSumOfSelectedCards)
+    currentSumOfSelectedCards %
+      getValue(card.value, currentSumOfSelectedCards) ===
+    0
   ) {
-    state.player.stash = [...state.currentSelection, card];
+    state.player.stash = [
+      ...state.player.stash,
+      ...state.currentSelection,
+      card
+    ];
     state.table = state.table.filter(
       item => !state.currentSelection.some(it => it.url === item.url)
     );
-    state.currentSelection.length = [];
+    state.currentSelection = [];
     state.player.hand = state.player.hand.filter(item => item.url !== card.url);
     state.lastToCollect = 'player';
   } else {
@@ -236,6 +245,30 @@ function handleCompPlay(state) {
   }
 }
 
+function handleFinishGame(state) {
+  let playerPoints = sumStashValues(state.player.stash);
+  let compPoints = sumStashValues(state.comp.stash);
+  if (state.player.stash.length > state.comp.stash.length) {
+    playerPoints += 3;
+  } else {
+    compPoints += 3;
+  }
+  alertWhoWon(playerPoints, compPoints);
+}
+
+// helper functions
+
+function alertWhoWon(playerPts, compPts) {
+  if (playerPts > compPts) {
+    alert(`Player has won with ${playerPts} to ${compPts}`);
+  } else {
+    alert(`Comp has won with ${compPts} to ${playerPts}`);
+  }
+}
+function sumStashValues(arr) {
+  return arr.reduce((sum, card) => sum + card.stashValue, 0);
+}
+
 function getSingleCardCombinationWithHighestValue(combinations) {
   return combinations.reduce((acc, combination) => {
     if (combination) {
@@ -283,8 +316,6 @@ function removeItemFromArray(arr, item) {
 }
 
 function getIndex(arr, item) {
-  console.log('index', arr.indexOf(item));
-
   return arr.indexOf(item);
 }
 
@@ -312,7 +343,7 @@ function getCardsThatCanBeCollected(card, combinations) {
 function getValue(val, sum) {
   switch (val) {
     case 'A':
-      return sum === 11 ? 11 : sum + 11 < 14 ? 11 : 1;
+      return sum === 11 ? 11 : sum > 1 && sum + 11 < 14 ? 11 : 1;
     case 'J':
       return 12;
     case 'Q':

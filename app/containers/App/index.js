@@ -18,7 +18,8 @@ import GlobalStyle from '../../global-styles';
 import {
   startGame,
   dealCards,
-  giveRestOfTableCardsToLastToCollect
+  giveRestOfTableCardsToLastToCollect,
+  finishGame
 } from '../../actions';
 import { selectareHandsEmpty, selectNoCardsLeft } from '../../utils/selectors';
 
@@ -43,6 +44,7 @@ function App() {
   useEffect(() => {
     if (noCardsLeft) {
       dispatch(giveRestOfTableCardsToLastToCollect());
+      dispatch(finishGame());
     }
   }, [noCardsLeft]);
   return (
