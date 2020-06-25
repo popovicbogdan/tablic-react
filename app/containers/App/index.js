@@ -31,7 +31,6 @@ function App() {
   }, []);
 
   const areHandsEmpty = useSelector(selectareHandsEmpty);
-  console.log(areHandsEmpty);
 
   useEffect(() => {
     if (areHandsEmpty) {

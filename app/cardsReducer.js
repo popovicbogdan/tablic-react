@@ -107,15 +107,8 @@ function cardsReducer(state = initState, action) {
 }
 
 function handleStartGame(state) {
-  state.cards.forEach(() => {
-    const randomIndex = Math.floor(Math.random() * 52) + 1;
+  shuffleCards(state);
 
-    return state.cards.splice(
-      randomIndex,
-      0,
-      state.cards.splice(Math.floor(Math.random() * 51) + 1, 1)[0]
-    );
-  });
   state.table = state.cards.splice(0, 4);
   state.player.hand = giveSixCards(state.cards);
   state.comp.hand = giveSixCards(state.cards);
@@ -176,73 +169,51 @@ function handleCollectRestOfCards(state) {
 }
 
 function handleCompPlay(state) {
-  const combinations = state.table.reduce(
-    (acc, item) =>
-      acc.concat(state.table.map(card => card !== item && [card, item])),
-    []
+  const twoCardCombinationWithHighestStashValueToCollect = getTwoCardCombinationWithHighestStashValueToCollect(
+    state
   );
 
-  const combinationsWhichCanBeCollected = state.comp.hand.flatMap(card =>
-    getCardsThatCanBeCollected(card, combinations)
+  const singleCardCombinationWithHighestStashValueToCollect = getSingleCardCombinationWithHighestStashValueToCollect(
+    state
   );
 
-  if (!combinationsWhichCanBeCollected.length) {
-    console.log('no 2 combinations cards to collect');
+  if (
+    !singleCardCombinationWithHighestStashValueToCollect &&
+    !twoCardCombinationWithHighestStashValueToCollect
+  ) {
+    console.log('no combination to collect, tossing to the table');
 
-    const singleCardsToCollect = state.comp.hand.reduce((acc, card) => {
-      const singleCardcombinations = getSingleCardCombinationsToCollect(
-        card,
-        state.table
-      );
-
-      return singleCardcombinations && acc.concat(singleCardcombinations);
-    }, []);
-
-    const SingleCardCombinationWithHighestValue =
-      singleCardsToCollect.length &&
-      getSingleCardCombinationWithHighestValue(singleCardsToCollect);
-
-    if (SingleCardCombinationWithHighestValue) {
-      console.log('there are cards to collect');
-
-      state.comp.stash.push(
-        removeItemFromArray(
-          state.comp.hand,
-          SingleCardCombinationWithHighestValue.handCard
-        )
-      );
-      state.comp.stash.push(
-        removeItemFromArray(
-          state.table,
-          SingleCardCombinationWithHighestValue.tableCard
-        )
-      );
-      state.lastToCollect = 'comp';
-    } else {
-      console.log(
-        'no single card combination to collect, tossing to the table'
-      );
-
-      sendRandomCardToTable(state.comp.hand, state.table);
-    }
+    sendRandomCardToTable(state.comp.hand, state.table);
+    return;
   }
-  const combinationWithHighestStashValue = getCombinationWithHighestStashValue(
-    combinationsWhichCanBeCollected
-  );
+  state.lastToCollect = 'comp';
+  if (
+    singleCardCombinationWithHighestStashValueToCollect &&
+    twoCardCombinationWithHighestStashValueToCollect
+  ) {
+    const higherValueCombination =
+      twoCardCombinationWithHighestStashValueToCollect.val >
+      singleCardCombinationWithHighestStashValueToCollect.val
+        ? twoCardCombinationWithHighestStashValueToCollect
+        : singleCardCombinationWithHighestStashValueToCollect;
 
-  if (combinationWithHighestStashValue.item) {
-    state.comp.stash.push(
-      removeItemFromArray(
-        state.comp.hand,
-        combinationWithHighestStashValue.item.handCard
-      )
-    );
-
-    combinationWithHighestStashValue.item.tableCards.forEach(item =>
-      state.comp.stash.push(removeItemFromArray(state.table, item))
-    );
-    state.lastToCollect = 'comp';
+    collectCards(state, higherValueCombination.combination);
+    state.abc = higherValueCombination.combination;
+    return;
   }
+  if (twoCardCombinationWithHighestStashValueToCollect) {
+    collectCards(
+      state,
+      twoCardCombinationWithHighestStashValueToCollect.combination
+    );
+    state.abc = twoCardCombinationWithHighestStashValueToCollect.combination;
+    return;
+  }
+  collectCards(
+    state,
+    singleCardCombinationWithHighestStashValueToCollect.combination
+  );
+  state.abc = singleCardCombinationWithHighestStashValueToCollect.combination;
 }
 
 function handleFinishGame(state) {
@@ -258,6 +229,16 @@ function handleFinishGame(state) {
 
 // helper functions
 
+function collectCards(state, combination) {
+  state.comp.stash.push(
+    removeItemFromArray(state.comp.hand, combination.handCard)
+  );
+
+  combination.tableCards.forEach(item =>
+    state.comp.stash.push(removeItemFromArray(state.table, item))
+  );
+}
+
 function alertWhoWon(playerPts, compPts) {
   if (playerPts > compPts) {
     alert(`Player has won with ${playerPts} to ${compPts}`);
@@ -265,26 +246,26 @@ function alertWhoWon(playerPts, compPts) {
     alert(`Comp has won with ${compPts} to ${playerPts}`);
   }
 }
+
 function sumStashValues(arr) {
   return arr.reduce((sum, card) => sum + card.stashValue, 0);
 }
 
 function getSingleCardCombinationWithHighestValue(combinations) {
-  return combinations.reduce((acc, combination) => {
-    if (combination) {
-      return combination.tableCard.stashValue +
-        combination.handCard.stashValue >=
-        acc.tableCard.stashValue + acc.handCard.stashValue
-        ? combination
-        : acc;
-    }
-  });
+  return combinations.reduce(
+    (acc, combination) => {
+      const val =
+        combination.tableCards[0].stashValue + combination.handCard.stashValue;
+      return val >= acc.val ? { val, combination } : acc;
+    },
+    { val: 0 }
+  );
 }
 
 function getSingleCardCombinationsToCollect(card, tableCards) {
   const combinations = tableCards.reduce((arr, tableCard) => {
     if (getValue(tableCard.value) === getValue(card.value)) {
-      arr.push({ tableCard, handCard: card });
+      arr.push({ tableCards: [tableCard], handCard: card });
     }
     return arr;
   }, []);
@@ -292,17 +273,88 @@ function getSingleCardCombinationsToCollect(card, tableCards) {
   return combinations;
 }
 
-function getCombinationWithHighestStashValue(combinations) {
+function getSingleCardCombinationWithHighestStashValueToCollect(state) {
+  const singleCardsToCollect = state.comp.hand.reduce((acc, card) => {
+    const singleCardcombinations = getSingleCardCombinationsToCollect(
+      card,
+      state.table
+    );
+
+    return singleCardcombinations && acc.concat(singleCardcombinations);
+  }, []);
+
+  const SingleCardCombinationWithHighestValue =
+    singleCardsToCollect.length &&
+    getSingleCardCombinationWithHighestValue(singleCardsToCollect);
+  return SingleCardCombinationWithHighestValue;
+}
+
+function get2CardCombinationWithHighestStashValue(combinations) {
   return combinations.reduce(
-    (obj, item) => {
-      const val = item.tableCards.reduce(
+    (obj, combination) => {
+      const val = combination.tableCards.reduce(
         (acc, it) => (it.stashValue ? acc + it.stashValue : acc),
-        item.handCard.stashValue
+        combination.handCard.stashValue
       );
-      return val >= obj.val ? { val, item } : obj;
+      return val >= obj.val ? { val, combination } : obj;
     },
     { val: 0 }
   );
+}
+
+function get2CardCombinationsThatCanBeCollectedWithGivenCard(
+  card,
+  combinations
+) {
+  return combinations.reduce((arr, combination) => {
+    if (
+      combination.reduce((acc, item) => acc + getValue(item.value), 0) ===
+      getValue(card.value)
+    ) {
+      arr.push({
+        handCard: card,
+        tableCards: combination
+      });
+    }
+    return arr;
+  }, []);
+}
+
+function getTwoCardCombinationWithHighestStashValueToCollect(state) {
+  const allTwoCardCombinations = state.table.reduce((acc, item) => {
+    state.table.forEach(card => {
+      if (item !== card) {
+        acc.push([card, item]);
+      }
+    });
+    return acc;
+  }, []);
+
+  const combinationsWhichCanBeCollected = state.comp.hand.flatMap(card =>
+    get2CardCombinationsThatCanBeCollectedWithGivenCard(
+      card,
+      allTwoCardCombinations
+    )
+  );
+
+  if (!combinationsWhichCanBeCollected.length) {
+    return null;
+  }
+  const combinationWithHighestStashValue = get2CardCombinationWithHighestStashValue(
+    combinationsWhichCanBeCollected
+  );
+  return combinationWithHighestStashValue;
+}
+
+function shuffleCards(state) {
+  state.cards.forEach(() => {
+    const randomIndex = Math.floor(Math.random() * 52) + 1;
+    return state.cards.splice(
+      randomIndex,
+      0,
+      state.cards.splice(Math.floor(Math.random() * 51) + 1, 1)[0]
+    );
+  });
 }
 
 function sendRandomCardToTable(handCards, tableCards) {
@@ -317,27 +369,6 @@ function removeItemFromArray(arr, item) {
 
 function getIndex(arr, item) {
   return arr.indexOf(item);
-}
-
-function getCardsThatCanBeCollected(card, combinations) {
-  const options = combinations.map(combination => {
-    if (combination) {
-      if (
-        combination.reduce((acc, item) => acc + getValue(item.value), 0) ===
-        getValue(card.value)
-      ) {
-        return {
-          handCard: card,
-          tableCards: combination,
-          canBeCollected: true
-        };
-      }
-      return false;
-    }
-    return false;
-  });
-
-  return options.filter(item => item.canBeCollected);
 }
 
 function getValue(val, sum) {
