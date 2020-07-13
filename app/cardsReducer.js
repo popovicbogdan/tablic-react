@@ -198,7 +198,6 @@ function handleCompPlay(state) {
         : singleCardCombinationWithHighestStashValueToCollect;
 
     collectCards(state, higherValueCombination.combination);
-    state.abc = higherValueCombination.combination;
     return;
   }
   if (twoCardCombinationWithHighestStashValueToCollect) {
@@ -206,14 +205,12 @@ function handleCompPlay(state) {
       state,
       twoCardCombinationWithHighestStashValueToCollect.combination
     );
-    state.abc = twoCardCombinationWithHighestStashValueToCollect.combination;
     return;
   }
   collectCards(
     state,
     singleCardCombinationWithHighestStashValueToCollect.combination
   );
-  state.abc = singleCardCombinationWithHighestStashValueToCollect.combination;
 }
 
 function handleFinishGame(state) {
